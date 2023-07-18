@@ -1,81 +1,64 @@
-
-import React, { useState, useEffect,useRef } from 'react';
-import { nanoid } from 'nanoid';
-import { ContactList } from './ContactList/ContactList';
-import { Filter } from './Filter/Filter';
-import { ContactForm } from './ContactForm/ContactForm';
+import React, { useState } from 'react';
+import { Section } from '../components/Section/Section';
+import { FeedbackOptions } from '../components/FeedbackOptions/FeedbackOptions';
+import { Statistics } from '../components/Statistics/Statistics';
+import { Notification } from '../components/Notification/Notification';
 import css from './App.module.css';
 
 export const App = () => {
-  const [contacts, setContacts] = useState([]);
-  const [filter, setFilter] = useState('');
-  const isFirstRender = useRef(true);
+  const [feedback, setFeedback] = useState({
+    good: 0,
+    neutral: 0,
+    bad: 0,
+  });
 
-  useEffect(() => {
-    setContacts(JSON.parse(localStorage.getItem('contacts')) || []);
-  }, []);
-
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      return
-    }
-    localStorage.setItem('contacts', JSON.stringify(contacts));
-  }, [contacts]);
-  
-
-  const addContact = (name, number) => {
-    if (isContactExists(name)) {
-      alert(`Contact "${name}" is already in contacts.`);
-      return;
-    }
-
-    const newContact = {
-      id: nanoid(),
-      name,
-      number,
-    };
-
-    setContacts((prevContacts) => [...prevContacts, newContact]);
+  // Збільшення лічильника відповідного відгуку
+  const handleLeaveFeedback = (option) => {
+    setFeedback((prevFeedback) => ({
+      ...prevFeedback,
+      [option]: prevFeedback[option] + 1,
+    }));
   };
 
-  const deleteContact = (contactId) => {
-    setContacts((prevContacts) =>
-      prevContacts.filter((contact) => contact.id !== contactId)
-    );
+  // Підрахунок загальної кількості відгуків
+  const countTotalFeedback = () => {
+    const { good, neutral, bad } = feedback;
+    return good + neutral + bad;
   };
 
-  const handleFilterChange = (e) => {
-    setFilter(e.target.value);
+  // Підрахунок  позитивних відгуків (%)
+  const countPositiveFeedbackPercentage = () => {
+    const { good } = feedback;
+    const total = countTotalFeedback();
+    return total === 0 ? 0 : Math.round((good / total) * 100);
   };
 
-  const getFilteredContacts = () => {
-    const normalizedFilter = filter.toLowerCase();
-
-    return contacts.filter((contact) =>
-      contact.name.toLowerCase().includes(normalizedFilter)
-    );
-  };
-
-  const isContactExists = (name) => {
-    return contacts.some(
-      (contact) => contact.name.toLowerCase() === name.toLowerCase()
-    );
-  };
-
-  const filteredContacts = getFilteredContacts();
+  const totalFeedback = countTotalFeedback();
+  const positivePercentage = countPositiveFeedbackPercentage();
 
   return (
-    <div className={css.wrapperApp}>
-      <h1>Phonebook</h1>
-      <div className="wrapperForm">
-        <ContactForm onAddContact={addContact} contacts={contacts} />
-      </div>
-      <h2>Contacts</h2>
-      <div className="wrapperList">
-        <Filter filter={filter} onChange={handleFilterChange} />
-        <ContactList contacts={filteredContacts} onDeleteContact={deleteContact} />
-      </div>
+    <div className={css.appWrapper}>
+      <Section title="Please leave feedback">
+        <FeedbackOptions
+          options={['good', 'neutral', 'bad']}
+          onButtonFeedback={handleLeaveFeedback}
+        />
+      </Section>
+
+      {totalFeedback === 0 ? (
+        <Notification message="There is no feedback" />
+      ) : (
+        <Section title="Statistics">
+          <Statistics
+            good={feedback.good}
+            neutral={feedback.neutral}
+            bad={feedback.bad}
+            total={totalFeedback}
+            positivePercentage={positivePercentage}
+          />
+        </Section>
+      )}
     </div>
   );
 };
+
